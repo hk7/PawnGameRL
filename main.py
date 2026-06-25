@@ -2,7 +2,7 @@ import logging
 import chess
 from logger_config import setup_logging
 from environment import PawnGameEnv
-from players import HumanPlayer, SmartPlayer, RandomPlayer
+from players import HumanPlayer, SmartPlayer, RandomPlayer, RLAgentPlayer
 
 # Setup main orchestration logger
 logger = logging.getLogger("GameMaster")
@@ -45,11 +45,14 @@ def main():
     setup_logging()
     
     # Easily hot-swap strategy profiles due to OOP architecture
-    p1 = SmartPlayer(chess.WHITE, "SmartBot-Alpha")
-    p2 = RandomPlayer(chess.BLACK, "RandomBot-Beta")
+    # p1 = SmartPlayer(chess.WHITE, "SmartBot-Alpha")
+    # p2 = RandomPlayer(chess.BLACK, "RandomBot-Beta")
     
+    p1 = RLAgentPlayer(chess.WHITE, "RL-SuperBrain", "pawn_game_rl_agent")
+    p2 = HumanPlayer(chess.BLACK, "You")
+    # play_game(p1, p2)
+
     play_game(p1, p2)
 
 if __name__ == "__main__":
     main()
-    

@@ -101,6 +101,36 @@ class PawnGameEnv(gym.Env):
         return self._get_obs(), reward, terminated, False, {}
 
 
+    def qqq_action_masks(self):
+        """Returns a boolean array of size 4096 where True means the move is legal."""
+        mask = np.zeros(4096, dtype=bool)
+        for move in self.board.legal_moves:
+            # Replicate the logic used to calculate action indices
+            # Handle standard implicit promotion index mapping
+            if self.board.piece_at(move.from_square) and self.board.piece_at(move.from_square).piece_type == chess.PAWN:
+                if chess.square_rank(move.to_square) in [0, 7]:
+                    move.promotion = chess.QUEEN
+                    
+            action_idx = move.from_square * 64 + move.to_square
+            mask[action_idx] = True
+        return mask
+
+
+    def action_masks(self):
+        """Returns a boolean array of size 4096 where True means the move is legal."""
+        mask = np.zeros(4096, dtype=bool)
+        for move in self.board.legal_moves:
+            # Replicate the implicit promotion logic to stay consistent with decode_action
+            moving_piece = self.board.piece_at(move.from_square)
+            if moving_piece and moving_piece.piece_type == chess.PAWN:
+                if chess.square_rank(move.to_square) in [0, 7]:
+                    move.promotion = chess.QUEEN
+                    
+            action_idx = move.from_square * 64 + move.to_square
+            mask[action_idx] = True
+        return mask
+
+
     def render(self):
         # Using print for the visible board grid, logging handles metadata
         print("\n" + str(self.board) + "\n")

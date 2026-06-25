@@ -3,6 +3,7 @@ import random
 import logging
 import chess
 from environment import PawnGameEnv
+from sb3_contrib import MaskablePPO
 
 logger = logging.getLogger("Players")
 
@@ -82,4 +83,19 @@ class SmartPlayer(Player):
         chosen_move = env.decode_action(best_action)
         logger.info(f"[{self.name} - Smart] Evaluated {len(legal_actions)} moves. Picked {chosen_move} (Heuristic Score: {best_score})")
         return best_action
+
+
+class RLAgentPlayer(Player):
+    """An AI player that relies on a trained MaskablePPO neural network model."""
+    def __init__(self, color, name, model_path):
+        super().__init__(color, name)
+        self.model = MaskablePPO.load(model_path)
+
+    def choose_action(self, env: PawnGameEnv) -> int:
+        obs = env._get_obs()
+        action_masks = env.action_masks()
+        
+        # Use the neural network to predict the absolute best legal action
+        action, _ = self.model.predict(obs, action_masks=action_masks, deterministic=True)
+        return int(action)
     
