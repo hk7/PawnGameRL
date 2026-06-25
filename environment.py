@@ -21,12 +21,12 @@ class PawnGameEnv(gym.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         self.board.clear()
-        
+
         # Set up Pawns on the 2nd (White) and 7th (Black) ranks
         for file in range(8):
             self.board.set_piece_at(chess.square(file, 1), chess.Piece(chess.PAWN, chess.WHITE))
             self.board.set_piece_at(chess.square(file, 6), chess.Piece(chess.PAWN, chess.BLACK))
-        
+
         logger.info("Game environment reset. Board is ready.")
         return self._get_obs(), {}
 
@@ -52,20 +52,20 @@ class PawnGameEnv(gym.Env):
         """Converts a flattened action index back into a chess.Move object safely."""
         from_square = action_idx // 64
         to_square = action_idx % 64
-        
+
         move = chess.Move(from_square, to_square)
-        
+
         # Only apply promotion if the piece moving is actually a PAWN
         piece = self.board.piece_at(from_square)
         if piece and piece.piece_type == chess.PAWN:
             if chess.square_rank(to_square) in [0, 7]:
                 move.promotion = chess.QUEEN
-                
+
         return move
 
     def step(self, action_idx):
         move = self.decode_action(action_idx)
-        
+
         if move not in self.board.legal_moves:
             logger.error(f"Illegal action index attempted: {action_idx} (Move: {move})")
             raise ValueError(f"Illegal move attempted: {move}")
@@ -80,7 +80,7 @@ class PawnGameEnv(gym.Env):
 
         # Execute move
         self.board.push(move)
-        
+
         # Custom Pawn Game Win condition: Game ends immediately on pawn promotion
         if is_pawn_promotion:
             terminated = True
@@ -110,7 +110,7 @@ class PawnGameEnv(gym.Env):
             if self.board.piece_at(move.from_square) and self.board.piece_at(move.from_square).piece_type == chess.PAWN:
                 if chess.square_rank(move.to_square) in [0, 7]:
                     move.promotion = chess.QUEEN
-                    
+
             action_idx = move.from_square * 64 + move.to_square
             mask[action_idx] = True
         return mask
@@ -131,6 +131,28 @@ class PawnGameEnv(gym.Env):
         return mask
 
 
-    def render(self):
+    def qqq_render(self):
         # Using print for the visible board grid, logging handles metadata
         print("\n" + str(self.board) + "\n")
+
+    def render(self):
+        """Renders the board with high-visibility symbols and clear file/rank borders."""
+        # Mapping chess pieces to clear Unicode symbols
+        unicode_pieces = {
+            'P': '♙',  # White Pawn
+            'p': '♟',  # Black Pawn
+            '.': '·'   # Empty square
+        }
+
+        board_str = str(self.board)
+        lines = board_str.split('\n')
+
+        print("\n  a b c d e f g h")
+        print("  ---------------")
+        for i, line in enumerate(lines):
+            rank = 8 - i
+            # Replace characters with high-visibility symbols
+            formatted_line = " ".join([unicode_pieces.get(char, char) for char in line.split()])
+            print(f"{rank}|{formatted_line}|{rank}")
+        print("  ---------------")
+        print("  a b c d e f g h\n")

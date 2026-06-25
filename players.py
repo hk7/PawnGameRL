@@ -39,11 +39,11 @@ class HumanPlayer(Player):
                 move = chess.Move.from_uci(user_input)
                 if chess.square_rank(move.to_square) in [0, 7]:
                     move.promotion = chess.QUEEN
-                
+
                 if move in legal_moves:
                     logger.info(f"[{self.name} - Human] Played valid move: {move}")
                     return move.from_square * 64 + move.to_square
-                
+
                 logger.warning(f"[{self.name} - Human] Input '{user_input}' is illegal right now.")
                 print("Illegal move! Try again.")
             except ValueError:
@@ -61,15 +61,15 @@ class SmartPlayer(Player):
         for action in legal_actions:
             move = env.decode_action(action)
             score = 0
-            
+
             # Feature 1: Immediate Promotion
             if chess.square_rank(move.to_square) == (7 if self.color == chess.WHITE else 0):
                 score += 1000 
-            
+
             # Feature 2: Captures
             if env.board.is_capture(move):
                 score += 50
-                
+
             # Feature 3: Prefer advancing pawns closer to the goal line
             distance_advanced = chess.square_rank(move.to_square)
             if self.color == chess.BLACK:
@@ -79,7 +79,7 @@ class SmartPlayer(Player):
             if score > best_score:
                 best_score = score
                 best_action = action
-                
+
         chosen_move = env.decode_action(best_action)
         logger.info(f"[{self.name} - Smart] Evaluated {len(legal_actions)} moves. Picked {chosen_move} (Heuristic Score: {best_score})")
         return best_action
@@ -87,15 +87,20 @@ class SmartPlayer(Player):
 
 class RLAgentPlayer(Player):
     """An AI player that relies on a trained MaskablePPO neural network model."""
-    def __init__(self, color, name, model_path):
+    def __init__(self, color: chess.Color, name: str, model_path: str):
         super().__init__(color, name)
+        # Load the trained Stable-Baselines3 model parameters
         self.model = MaskablePPO.load(model_path)
+        logger.info(f"[{self.name} - RL Agent] Successfully loaded model from '{model_path}'")
 
     def choose_action(self, env: PawnGameEnv) -> int:
         obs = env._get_obs()
         action_masks = env.action_masks()
-        
-        # Use the neural network to predict the absolute best legal action
+
+        # The model predicts the best action based on the board state
+        # We pass the action mask so it strictly evaluates legal moves
         action, _ = self.model.predict(obs, action_masks=action_masks, deterministic=True)
+
+        chosen_move = env.decode_action(int(action))
+        logger.info(f"[{self.name} - RL Agent] Brain selected move: {chosen_move}")
         return int(action)
-    

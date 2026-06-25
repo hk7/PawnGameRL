@@ -11,7 +11,7 @@ def play_game(player1: PawnGameEnv, player2: PawnGameEnv):
     env = PawnGameEnv()
     obs, _ = env.reset()
     env.render()
-    
+
     current_turn = player1 if player1.color == chess.WHITE else player2
     logger.info(f"Match started! White: {player1.name} vs Black: {player2.name}")
 
@@ -21,11 +21,11 @@ def play_game(player1: PawnGameEnv, player2: PawnGameEnv):
             logger.info("No legal moves remaining on the board. Structural block/stalemate achieved.")
             print("No legal moves remaining! Game Over.")
             break
-            
+
         action = current_turn.choose_action(env)
         _, reward, terminated, _, _ = env.step(action)
         env.render()
-        
+
         if terminated:
             logger.info("Termination signal caught from game rules framework.")
             if reward > 0:
@@ -35,7 +35,7 @@ def play_game(player1: PawnGameEnv, player2: PawnGameEnv):
             else:
                 logger.info("Match Finished. Outcome: Draw")
             break
-            
+
         # Switch turns
         current_turn = player2 if current_turn == player1 else player1
 
@@ -43,14 +43,21 @@ def play_game(player1: PawnGameEnv, player2: PawnGameEnv):
 def main():
     # Initialize unified logging profile
     setup_logging()
-    
+
     # Easily hot-swap strategy profiles due to OOP architecture
     # p1 = SmartPlayer(chess.WHITE, "SmartBot-Alpha")
     # p2 = RandomPlayer(chess.BLACK, "RandomBot-Beta")
+
+    # p1 = RLAgentPlayer(chess.WHITE, "RL-SuperBrain", "pawn_game_rl_agent")
+    # p2 = HumanPlayer(chess.BLACK, "You")
+
+    # Define your matchup here!
+    # P1 (White) is our newly trained RL brain
+    p1 = RLAgentPlayer(chess.WHITE, "RL-Bot", "pawn_game_rl_agent")
     
-    p1 = RLAgentPlayer(chess.WHITE, "RL-SuperBrain", "pawn_game_rl_agent")
-    p2 = HumanPlayer(chess.BLACK, "You")
-    # play_game(p1, p2)
+    # P2 (Black) can be a HumanPlayer ("You"), a SmartPlayer, or a RandomPlayer
+    p2 = HumanPlayer(chess.BLACK, "Human-Player")
+
 
     play_game(p1, p2)
 
