@@ -47,14 +47,20 @@ class PawnGameEnv(gym.Env):
             actions.append(action_idx)
         return actions
 
+
     def decode_action(self, action_idx):
-        """Converts a flattened action index back into a chess.Move object."""
+        """Converts a flattened action index back into a chess.Move object safely."""
         from_square = action_idx // 64
         to_square = action_idx % 64
         
         move = chess.Move(from_square, to_square)
-        if chess.square_rank(to_square) in [0, 7]:
-            move.promotion = chess.QUEEN
+        
+        # Only apply promotion if the piece moving is actually a PAWN
+        piece = self.board.piece_at(from_square)
+        if piece and piece.piece_type == chess.PAWN:
+            if chess.square_rank(to_square) in [0, 7]:
+                move.promotion = chess.QUEEN
+                
         return move
 
     def step(self, action_idx):
@@ -64,23 +70,37 @@ class PawnGameEnv(gym.Env):
             logger.error(f"Illegal action index attempted: {action_idx} (Move: {move})")
             raise ValueError(f"Illegal move attempted: {move}")
 
+        # Track if a pawn is about to promote before pushing the move
+        moving_piece = self.board.piece_at(move.from_square)
+        is_pawn_promotion = (
+            moving_piece and 
+            moving_piece.piece_type == chess.PAWN and 
+            chess.square_rank(move.to_square) in [0, 7]
+        )
+
         # Execute move
         self.board.push(move)
         
-        # Check game-over conditions
-        terminated = self.board.is_game_over()
-        reward = 0.0
+        # Custom Pawn Game Win condition: Game ends immediately on pawn promotion
+        if is_pawn_promotion:
+            terminated = True
+            # The player who just moved won
+            reward = 10.0 if self.board.turn == chess.BLACK else -10.0
+            logger.info(f"Pawn promotion achieved on {chess.square_name(move.to_square)}!")
+        else:
+            # Otherwise, check if a player is completely immobilized (stalemate/win by block)
+            terminated = self.board.is_game_over() or not list(self.board.legal_moves)
+            reward = 0.0
+            if terminated:
+                outcome = self.board.outcome()
+                if outcome and outcome.winner == chess.WHITE:
+                    reward = 10.0
+                elif outcome and outcome.winner == chess.BLACK:
+                    reward = -10.0
 
-        if terminated:
-            outcome = self.board.outcome()
-            if outcome.winner == chess.WHITE:
-                reward = 10.0
-            elif outcome.winner == chess.BLACK:
-                reward = -10.0
-        
         return self._get_obs(), reward, terminated, False, {}
+
 
     def render(self):
         # Using print for the visible board grid, logging handles metadata
         print("\n" + str(self.board) + "\n")
-        

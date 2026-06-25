@@ -40,7 +40,7 @@ def play_game(player1: PawnGameEnv, player2: PawnGameEnv):
         current_turn = player2 if current_turn == player1 else player1
 
 
-if __name__ == "__main__":
+def main():
     # Initialize unified logging profile
     setup_logging()
     
@@ -49,4 +49,7 @@ if __name__ == "__main__":
     p2 = RandomPlayer(chess.BLACK, "RandomBot-Beta")
     
     play_game(p1, p2)
+
+if __name__ == "__main__":
+    main()
     
