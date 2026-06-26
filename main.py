@@ -3,11 +3,13 @@ import chess
 from logger_config import setup_logging
 from environment import PawnGameEnv
 from players import HumanPlayer, SmartPlayer, RandomPlayer, RLAgentPlayer
+from gui import PawnGameGUI
 
 # Setup main orchestration logger
 logger = logging.getLogger("GameMaster")
 
 def play_game(player1: PawnGameEnv, player2: PawnGameEnv):
+    # note: no need those lines with GUI!
     env = PawnGameEnv()
     obs, _ = env.reset()
     env.render()
@@ -40,7 +42,7 @@ def play_game(player1: PawnGameEnv, player2: PawnGameEnv):
         current_turn = player2 if current_turn == player1 else player1
 
 
-def main():
+def old_main():
     # Initialize unified logging profile
     setup_logging()
 
@@ -54,12 +56,29 @@ def main():
     # Define your matchup here!
     # P1 (White) is our newly trained RL brain
     p1 = RLAgentPlayer(chess.WHITE, "RL-Bot", "pawn_game_rl_agent")
-    
+
     # P2 (Black) can be a HumanPlayer ("You"), a SmartPlayer, or a RandomPlayer
     p2 = HumanPlayer(chess.BLACK, "Human-Player")
 
-
     play_game(p1, p2)
+
+
+def main():
+    # Initialize unified logging profile
+    setup_logging()
+
+    # 1. Create the single environment instance
+    env = PawnGameEnv()
+    env.reset()
+
+    # 2. Assign the players
+    white_p = RLAgentPlayer(chess.WHITE, "RL-Bot", "pawn_game_rl_agent")
+    black_p = HumanPlayer(chess.BLACK, "Human")
+
+    # 3. Hand everything off to the GUI
+    print("Launching Graphical Interface...")
+    PawnGameGUI(env, white_p, black_p)
+
 
 if __name__ == "__main__":
     main()

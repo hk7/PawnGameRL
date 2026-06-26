@@ -63,7 +63,7 @@ class PawnGameEnv(gym.Env):
 
         return move
 
-    def step(self, action_idx):
+    def old_step(self, action_idx):
         move = self.decode_action(action_idx)
 
         if move not in self.board.legal_moves:
@@ -92,6 +92,98 @@ class PawnGameEnv(gym.Env):
             terminated = self.board.is_game_over() or not list(self.board.legal_moves)
             reward = 0.0
             if terminated:
+                outcome = self.board.outcome()
+                if outcome and outcome.winner == chess.WHITE:
+                    reward = 10.0
+                elif outcome and outcome.winner == chess.BLACK:
+                    reward = -10.0
+
+        return self._get_obs(), reward, terminated, False, {}
+
+
+    def old2_step(self, action_idx):
+        move = self.decode_action(action_idx)
+
+        if move not in self.board.legal_moves:
+            logger.error(f"Illegal action index attempted: {action_idx} (Move: {move})")
+            raise ValueError(f"Illegal move attempted: {move}")
+
+        # Get the color of the player making the move RIGHT NOW
+        current_turn_color = self.board.turn
+
+        moving_piece = self.board.piece_at(move.from_square)
+        is_pawn_promotion = (
+            moving_piece and 
+            moving_piece.piece_type == chess.PAWN and 
+            chess.square_rank(move.to_square) in [0, 7]
+        )
+
+        # Execute move (flips the turn automatically)
+        self.board.push(move)
+
+        terminated = False
+        reward = 0.0
+
+        if is_pawn_promotion:
+            terminated = True
+            # Base the reward on the color that actually made the move!
+            reward = 10.0 if current_turn_color == chess.WHITE else -10.0
+            logger.info(f"Pawn promotion achieved by {'White' if current_turn_color == chess.WHITE else 'Black'} on {chess.square_name(move.to_square)}!")
+        else:
+            terminated = self.board.is_game_over() or not list(self.board.legal_moves)
+            if terminated:
+                outcome = self.board.outcome()
+                if outcome and outcome.winner == chess.WHITE:
+                    reward = 10.0
+                elif outcome and outcome.winner == chess.BLACK:
+                    reward = -10.0
+
+        return self._get_obs(), reward, terminated, False, {}
+
+
+    def step(self, action_idx):
+        move = self.decode_action(action_idx)
+
+        if move not in self.board.legal_moves:
+            logger.error(f"Illegal action index attempted: {action_idx} (Move: {move})")
+            raise ValueError(f"Illegal move attempted: {move}")
+
+        # Get the color of the player making the move RIGHT NOW
+        current_turn_color = self.board.turn
+
+        moving_piece = self.board.piece_at(move.from_square)
+        is_pawn_promotion = (
+            moving_piece and 
+            moving_piece.piece_type == chess.PAWN and 
+            chess.square_rank(move.to_square) in [0, 7]
+        )
+
+        # Execute move (flips the turn automatically)
+        self.board.push(move)
+
+        terminated = False
+        reward = 0.0
+
+        if is_pawn_promotion:
+            terminated = True
+            reward = 10.0 if current_turn_color == chess.WHITE else -10.0
+            logger.info(f"Pawn promotion achieved by {'White' if current_turn_color == chess.WHITE else 'Black'} on {chess.square_name(move.to_square)}!")
+        else:
+            # Check if the NEXT player has any moves left
+            next_player_has_moves = bool(list(self.board.legal_moves))
+
+            # Check for immobilization / no legal moves ---
+            if not next_player_has_moves:
+                terminated = True
+                # The player whose turn it is now has no moves, meaning they LOSE.
+                # If it's White's turn and they are blocked -> Black wins (-10.0)
+                # If it's Black's turn and they are blocked -> White wins (+10.0)
+                reward = -10.0 if self.board.turn == chess.WHITE else 10.0
+                logger.info(f"Game over by block! {'White' if self.board.turn == chess.WHITE else 'Black'} is out of legal moves.")
+
+            elif self.board.is_game_over():
+                # Fallback for standard chess termination conditions if any apply
+                terminated = True
                 outcome = self.board.outcome()
                 if outcome and outcome.winner == chess.WHITE:
                     reward = 10.0

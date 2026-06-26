@@ -21,6 +21,10 @@ class Player(abc.ABC):
 
 class RandomPlayer(Player):
     """Selects moves completely at random."""
+    def __init__(self, color, name):
+        super().__init__(color, name)
+        self.is_ai = True
+
     def choose_action(self, env: PawnGameEnv) -> int:
         legal_actions = env.get_legal_actions()
         action = random.choice(legal_actions)
@@ -53,6 +57,10 @@ class HumanPlayer(Player):
 
 class SmartPlayer(Player):
     """Heuristic player optimizing promotion, captures, and progression."""
+    def __init__(self, color, name):
+        super().__init__(color, name)
+        self.is_ai = True
+
     def choose_action(self, env: PawnGameEnv) -> int:
         legal_actions = env.get_legal_actions()
         best_action = legal_actions[0]
@@ -91,6 +99,7 @@ class RLAgentPlayer(Player):
         super().__init__(color, name)
         # Load the trained Stable-Baselines3 model parameters
         self.model = MaskablePPO.load(model_path)
+        self.is_ai = True
         logger.info(f"[{self.name} - RL Agent] Successfully loaded model from '{model_path}'")
 
     def choose_action(self, env: PawnGameEnv) -> int:
