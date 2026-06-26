@@ -72,7 +72,8 @@ def main():
     env.reset()
 
     # 2. Assign the players
-    white_p = RLAgentPlayer(chess.WHITE, "RL-Bot", "pawn_game_rl_agent")
+    # white_p = RLAgentPlayer(chess.WHITE, "RL-Bot", "pawn_game_rl_agent")
+    white_p = RLAgentPlayer(chess.WHITE, "Self-Play-Bot", "self_play_agent_latest")
     black_p = HumanPlayer(chess.BLACK, "Human")
 
     # 3. Hand everything off to the GUI
