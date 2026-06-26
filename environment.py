@@ -77,83 +77,6 @@ class PawnGameEnv(gym.Env):
 
         return move
 
-    def old_step(self, action_idx):
-        move = self.decode_action(action_idx)
-
-        if move not in self.board.legal_moves:
-            logger.error(f"Illegal action index attempted: {action_idx} (Move: {move})")
-            raise ValueError(f"Illegal move attempted: {move}")
-
-        # Track if a pawn is about to promote before pushing the move
-        moving_piece = self.board.piece_at(move.from_square)
-        is_pawn_promotion = (
-            moving_piece and 
-            moving_piece.piece_type == chess.PAWN and 
-            chess.square_rank(move.to_square) in [0, 7]
-        )
-
-        # Execute move
-        self.board.push(move)
-
-        # Custom Pawn Game Win condition: Game ends immediately on pawn promotion
-        if is_pawn_promotion:
-            terminated = True
-            # The player who just moved won
-            reward = 10.0 if self.board.turn == chess.BLACK else -10.0
-            logger.info(f"Pawn promotion achieved on {chess.square_name(move.to_square)}!")
-        else:
-            # Otherwise, check if a player is completely immobilized (stalemate/win by block)
-            terminated = self.board.is_game_over() or not list(self.board.legal_moves)
-            reward = 0.0
-            if terminated:
-                outcome = self.board.outcome()
-                if outcome and outcome.winner == chess.WHITE:
-                    reward = 10.0
-                elif outcome and outcome.winner == chess.BLACK:
-                    reward = -10.0
-
-        return self._get_obs(), reward, terminated, False, {}
-
-
-    def old2_step(self, action_idx):
-        move = self.decode_action(action_idx)
-
-        if move not in self.board.legal_moves:
-            logger.error(f"Illegal action index attempted: {action_idx} (Move: {move})")
-            raise ValueError(f"Illegal move attempted: {move}")
-
-        # Get the color of the player making the move RIGHT NOW
-        current_turn_color = self.board.turn
-
-        moving_piece = self.board.piece_at(move.from_square)
-        is_pawn_promotion = (
-            moving_piece and 
-            moving_piece.piece_type == chess.PAWN and 
-            chess.square_rank(move.to_square) in [0, 7]
-        )
-
-        # Execute move (flips the turn automatically)
-        self.board.push(move)
-
-        terminated = False
-        reward = 0.0
-
-        if is_pawn_promotion:
-            terminated = True
-            # Base the reward on the color that actually made the move!
-            reward = 10.0 if current_turn_color == chess.WHITE else -10.0
-            logger.info(f"Pawn promotion achieved by {'White' if current_turn_color == chess.WHITE else 'Black'} on {chess.square_name(move.to_square)}!")
-        else:
-            terminated = self.board.is_game_over() or not list(self.board.legal_moves)
-            if terminated:
-                outcome = self.board.outcome()
-                if outcome and outcome.winner == chess.WHITE:
-                    reward = 10.0
-                elif outcome and outcome.winner == chess.BLACK:
-                    reward = -10.0
-
-        return self._get_obs(), reward, terminated, False, {}
-
 
     def step(self, action_idx):
         move = self.decode_action(action_idx)
@@ -203,6 +126,19 @@ class PawnGameEnv(gym.Env):
                     reward = 10.0
                 elif outcome and outcome.winner == chess.BLACK:
                     reward = -10.0
+
+            # INTERMEDIATE MATERIAL REWARDS
+            if not terminated:
+                # Count current pieces on the board
+                white_pawns = len(self.board.pieces(chess.PAWN, chess.WHITE))
+                black_pawns = len(self.board.pieces(chess.PAWN, chess.BLACK))
+                
+                # We want White to maximize this score, and Black to minimize it
+                # Give a tiny weight (0.2) so it doesn't override the main goal of promotion
+                material_balance = (white_pawns - black_pawns) * 0.2
+                
+                # If it's White's training turn, a positive balance is good
+                reward += material_balance
 
         return self._get_obs(), reward, terminated, False, {}
 
