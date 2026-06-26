@@ -27,6 +27,20 @@ class PawnGameEnv(gym.Env):
             self.board.set_piece_at(chess.square(file, 1), chess.Piece(chess.PAWN, chess.WHITE))
             self.board.set_piece_at(chess.square(file, 6), chess.Piece(chess.PAWN, chess.BLACK))
 
+        # Randomized Openings for Training Diversity ---
+        if options and options.get("scramble_board", False):
+            import random
+            # Play a random number of opening moves (between 2 and 6) to mix up positions
+            num_scramble_moves = random.randint(2, 6)
+            for _ in range(num_scramble_moves):
+                legal_moves = list(self.board.legal_moves)
+                if not legal_moves or self.board.is_game_over():
+                    break
+                # Filter out promotions during scramble to keep it clean
+                non_promo_moves = [m for m in legal_moves if not (self.board.piece_at(m.from_square).piece_type == chess.PAWN and chess.square_rank(m.to_square) in [0, 7])]
+                if non_promo_moves:
+                    self.board.push(random.choice(non_promo_moves))
+
         logger.info("Game environment reset. Board is ready.")
         return self._get_obs(), {}
 

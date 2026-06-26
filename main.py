@@ -69,7 +69,10 @@ def main():
 
     # 1. Create the single environment instance
     env = PawnGameEnv()
-    env.reset()
+    # env.reset()
+
+    # Pass options to explicitly disable scrambling for your match
+    env.reset(options={"scramble_board": False})
 
     # 2. Assign the players
     # white_p = RLAgentPlayer(chess.WHITE, "RL-Bot", "pawn_game_rl_agent")
