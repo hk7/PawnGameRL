@@ -22,7 +22,7 @@ class SelfPlayEnv(PawnGameEnv):
         options["scramble_board"] = True
         return super().reset(seed=seed, options=options)
 
-    def step(self, action_idx):
+    def old_step(self, action_idx):
         # 1. Agent (White) takes its turn
         obs, reward, terminated, truncated, info = super().step(action_idx)
 
@@ -38,6 +38,23 @@ class SelfPlayEnv(PawnGameEnv):
 
             if terminated and opp_reward == -10.0:
                 reward = -10.0
+
+        return obs, reward, terminated, truncated, info
+
+
+    def step(self, action_idx):
+        # 1. Training Agent (White) takes its turn
+        obs, reward, terminated, truncated, info = super().step(action_idx)
+
+        # 2. Opponent (Black) takes its turn using the frozen model
+        if not terminated and self.opponent_model is not None:
+            opp_obs = self._get_obs()
+            opp_mask = self.action_masks()
+
+            opp_action, _ = self.opponent_model.predict(opp_obs, action_masks=opp_mask, deterministic=False)
+
+            # Use the environment's step directly to let material changes alter the reward
+            obs, reward, terminated, truncated, info = super().step(int(opp_action))
 
         return obs, reward, terminated, truncated, info
 
